@@ -18,14 +18,13 @@ RUN apt-get update && apt-get install -y \
     ark \
     okular \
     gwenview \
-    spectacle \
     kcalc \
     # VNC / noVNC
     tigervnc-standalone-server tigervnc-common \
     novnc websockify \
     # Desktop plumbing
     dbus-x11 xfonts-base \
-    policykit-1-gnome \
+    polkit-kde-agent-1 \
     # Fonts (critical for web rendering)
     fonts-liberation fonts-dejavu-core \
     fonts-noto-color-emoji fonts-noto-core \
