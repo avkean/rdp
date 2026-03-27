@@ -13,7 +13,16 @@ mkdir -p /run/dbus && dbus-daemon --system --fork 2>/dev/null || true
 # ── Set KasmVNC password ───────────────────────────────────────────
 # Write .kasmpasswd directly — kasmvncpasswd requires a TTY which
 # doesn't exist in non-interactive Docker containers.
-VNC_PW_HASH=$(python3 -c "import crypt; print(crypt.crypt('${VNC_PASS}', '\$5\$kasm\$'))")
+#
+# Format: username:hash:permissions  (one per line)
+#   - hash is SHA-256 crypt: $5$kasm$<hash> (the exact format KasmVNC uses)
+#   - permissions: r=read, w=write, o=owner
+#
+# KasmVNC validates passwords by calling crypt(input, "$5$kasm$") and
+# comparing the result to the stored hash. We use `openssl passwd`
+# which is available on Kali (and most Linux) without extra packages.
+# This avoids Python's `crypt` module (removed in 3.13).
+VNC_PW_HASH=$(openssl passwd -5 -salt kasm "${VNC_PASS}")
 echo "user:${VNC_PW_HASH}:ow" > /root/.kasmpasswd
 chmod 600 /root/.kasmpasswd
 
