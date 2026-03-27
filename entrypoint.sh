@@ -10,15 +10,21 @@ export XDG_RUNTIME_DIR=/tmp/runtime-root
 mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
 mkdir -p /run/dbus && dbus-daemon --system --fork 2>/dev/null || true
 
-# Set VNC password (xstartup is pre-baked in image)
-echo "$VNC_PASS" | vncpasswd -f > /root/.config/tigervnc/passwd
-chmod 600 /root/.config/tigervnc/passwd
+# ── Set KasmVNC password ───────────────────────────────────────────
+# KasmVNC uses username:password auth (not password-only like TigerVNC)
+echo -e "${VNC_PASS}\n${VNC_PASS}\n" | kasmvncpasswd -u user -w
+kasmvncpasswd -u user -o
 
-# ── Launch everything ──────────────────────────────────────────────
-vncserver :1 -geometry 1920x1080 -depth 24 -localhost yes -AlwaysShared
-websockify --web /usr/share/novnc 6080 localhost:5901 &
+# ── Launch KasmVNC ─────────────────────────────────────────────────
+# Single process: VNC server + WebSocket server + web client
+# No websockify or noVNC needed — all built into KasmVNC
+vncserver :1 -geometry 1920x1080 -depth 24
+
+echo "[*] KasmVNC started on port 6901"
+
+# ── Launch ngrok tunnel ────────────────────────────────────────────
 ngrok config add-authtoken "$NGROK_TOKEN"
-ngrok http 6080 --log=stdout > /tmp/ngrok.log 2>&1 &
+ngrok http 6901 --log=stdout > /tmp/ngrok.log 2>&1 &
 
 # ── Wait for ngrok URL ─────────────────────────────────────────────
 NGROK_URL=""
@@ -31,9 +37,15 @@ done
 [ -z "$NGROK_URL" ] && { echo "[FATAL] ngrok failed"; tail -20 /tmp/ngrok.log 2>/dev/null; exit 1; }
 
 echo ""
-echo "  URL:      ${NGROK_URL}/vnc.html"
+echo "============================================"
+echo "  KALI LINUX - BROWSER ACCESS READY"
+echo "============================================"
+echo ""
+echo "  URL:      ${NGROK_URL}"
+echo "  User:     user"
 echo "  Password: ${VNC_PASS}"
 echo "  Expires:  ${DURATION}h"
 echo ""
+echo "============================================"
 
 sleep $(( DURATION * 3600 ))
