@@ -11,9 +11,11 @@ mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
 mkdir -p /run/dbus && dbus-daemon --system --fork 2>/dev/null || true
 
 # ── Set KasmVNC password ───────────────────────────────────────────
-# KasmVNC uses username:password auth (not password-only like TigerVNC)
-echo -e "${VNC_PASS}\n${VNC_PASS}\n" | kasmvncpasswd -u user -w
-kasmvncpasswd -u user -o
+# Write .kasmpasswd directly — kasmvncpasswd requires a TTY which
+# doesn't exist in non-interactive Docker containers.
+VNC_PW_HASH=$(python3 -c "import crypt; print(crypt.crypt('${VNC_PASS}', '\$5\$kasm\$'))")
+echo "user:${VNC_PW_HASH}:ow" > /root/.kasmpasswd
+chmod 600 /root/.kasmpasswd
 
 # ── Launch KasmVNC ─────────────────────────────────────────────────
 # Single process: VNC server + WebSocket server + web client
