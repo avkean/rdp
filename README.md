@@ -23,7 +23,7 @@ Ephemeral Kali Linux desktop accessible from any browser. Runs on GitHub Actions
 5. **Start a session**:
    - Actions → "Kali Desktop Session" → Run workflow
    - Pick duration and VNC password
-   - Wait ~3 min for the container to pull and start
+   - Wait ~1-2 min for the container to pull and start
    - Find the ngrok URL in the workflow logs
 
 ## Customizing tools
