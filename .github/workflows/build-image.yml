@@ -1,4 +1,4 @@
-name: Build RDP Image
+name: Build Kali Desktop Image
 
 on:
   workflow_dispatch:
@@ -10,17 +10,44 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
+      contents: read
       packages: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}/kali-desktop
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      # Reclaim ~30 GB of runner disk (Kali image is large)
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
 
-      - name: Build and push image
-        run: |
-          IMAGE=ghcr.io/${{ github.repository }}/rdp-desktop:latest
-          docker build -t $IMAGE .
-          docker push $IMAGE
-          echo "Pushed $IMAGE"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE }}:latest
+          # Registry cache bypasses the 10 GB GHA cache limit
+          cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max

@@ -1,65 +1,69 @@
-FROM ubuntu:24.04
+FROM kalilinux/kali-rolling
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# ── Core packages + KDE Plasma ────────────────────────────────────
+# ── Layer 1: Desktop environment (largest, changes least) ───────────
+# No --no-install-recommends here — XFCE needs recommended deps for
+# themes, icons, and session components to work properly in VNC.
 RUN apt-get update && apt-get install -y \
-    # KDE Plasma desktop
-    kde-plasma-desktop \
-    kwin-x11 \
-    plasma-workspace \
-    breeze \
-    breeze-gtk-theme \
-    breeze-icon-theme \
-    # KDE apps
-    dolphin \
-    konsole \
-    kate \
-    ark \
-    okular \
-    gwenview \
-    kcalc \
-    # VNC / noVNC
-    tigervnc-standalone-server tigervnc-common \
-    novnc websockify \
-    # Desktop plumbing
-    dbus-x11 xfonts-base \
-    polkit-kde-agent-1 \
-    # Fonts (critical for web rendering)
-    fonts-liberation fonts-dejavu-core \
-    fonts-noto-color-emoji fonts-noto-core \
-    fonts-ubuntu fontconfig \
-    # Networking & system utilities
-    iputils-ping net-tools iproute2 traceroute dnsutils \
-    wget curl nano sudo less openssh-client \
-    ca-certificates locales tzdata lsof htop \
-    gnupg software-properties-common \
-    zip unzip file python3 \
+    kali-desktop-xfce \
+    tigervnc-standalone-server \
+    novnc \
+    websockify \
+    dbus dbus-x11 \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# ── Firefox via Mozilla PPA (snap doesn't work in Docker) ─────────
-RUN add-apt-repository -y ppa:mozillateam/ppa \
-    && printf 'Package: firefox*\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001\n' \
-       > /etc/apt/preferences.d/mozilla-firefox \
-    && apt-get update \
-    && apt-get install -y firefox \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+# ── Layer 2: Pentesting tools (separate layer for caching) ──────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    kali-tools-top10 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# ── ngrok via official apt repo ────────────────────────────────────
+# ── Layer 3: System utilities ───────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget curl nano sudo less openssh-client \
+    net-tools iproute2 iputils-ping dnsutils traceroute \
+    htop lsof zip unzip file \
+    ca-certificates locales \
+    python3 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# ── Layer 4: ngrok ──────────────────────────────────────────────────
 RUN curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
        | tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null \
     && echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
        | tee /etc/apt/sources.list.d/ngrok.list \
-    && apt-get update \
-    && apt-get install -y ngrok \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    && apt-get update && apt-get install -y ngrok \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# ── Generate UTF-8 locale ─────────────────────────────────────────
-RUN locale-gen en_US.UTF-8
+# ── Locale ──────────────────────────────────────────────────────────
+RUN sed -i 's/# en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen && locale-gen
 ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
-# Startup script
+# ── Fix known XFCE-in-Docker issues ────────────────────────────────
+
+# Suppress PolicyKit "color managed device" auth popup
+RUN mkdir -p /etc/polkit-1/localauthority/50-local.d \
+    && printf '%s\n' \
+       '[Allow Colord]' \
+       'Identity=unix-user:*' \
+       'Action=org.freedesktop.color-manager.create-device;org.freedesktop.color-manager.create-profile;org.freedesktop.color-manager.delete-device;org.freedesktop.color-manager.delete-profile;org.freedesktop.color-manager.modify-device;org.freedesktop.color-manager.modify-profile' \
+       'ResultAny=yes' \
+       'ResultInactive=yes' \
+       'ResultActive=yes' \
+       > /etc/polkit-1/localauthority/50-local.d/45-allow-colord.pkla
+
+# Disable power manager and screensaver (meaningless in container;
+# screensaver/light-locker will lock you out of VNC)
+RUN rm -f /etc/xdg/autostart/xfce4-power-manager.desktop 2>/dev/null; \
+    rm -f /etc/xdg/autostart/xscreensaver.desktop 2>/dev/null; \
+    rm -f /etc/xdg/autostart/light-locker.desktop 2>/dev/null; \
+    true
+
+# ── Entrypoint ──────────────────────────────────────────────────────
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
