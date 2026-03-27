@@ -3,9 +3,7 @@ FROM kalilinux/kali-rolling
 ENV DEBIAN_FRONTEND=noninteractive
 
 # ── Layer 1: Desktop environment (largest, changes least) ───────────
-# No --no-install-recommends here — XFCE needs recommended deps for
-# themes, icons, and session components to work properly in VNC.
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     kali-desktop-xfce \
     tigervnc-standalone-server \
     novnc \

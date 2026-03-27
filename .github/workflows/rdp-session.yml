@@ -22,27 +22,12 @@ jobs:
       IMAGE: ghcr.io/${{ github.repository }}/kali-desktop:latest
 
     steps:
-      # Free disk to fit the pulled image + running container
-      - name: Free disk space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
-
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Pull image
-        run: docker pull "$IMAGE"
 
       - name: Start Kali Desktop
         run: |
