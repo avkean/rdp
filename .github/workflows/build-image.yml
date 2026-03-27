@@ -1,0 +1,26 @@
+name: Build RDP Image
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Dockerfile'
+      - 'entrypoint.sh'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push image
+        run: |
+          IMAGE=ghcr.io/${{ github.repository }}/rdp-desktop:latest
+          docker build -t $IMAGE .
+          docker push $IMAGE
+          echo "Pushed $IMAGE"

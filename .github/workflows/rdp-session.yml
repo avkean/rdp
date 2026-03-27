@@ -1,0 +1,32 @@
+name: Browser RDP Session
+
+on:
+  workflow_dispatch:
+    inputs:
+      session_duration:
+        description: 'Session duration in hours'
+        required: true
+        default: '2'
+        type: choice
+        options: ['1', '2', '4', '6']
+      vnc_password:
+        description: 'VNC password (6-8 chars)'
+        required: true
+        default: 'rdp123'
+
+jobs:
+  rdp-session:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Start RDP container
+        run: |
+          IMAGE=ghcr.io/${{ github.repository }}/rdp-desktop:latest
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          
+          docker run --rm \
+            -e VNC_PASSWORD="${{ github.event.inputs.vnc_password }}" \
+            -e SESSION_HOURS="${{ github.event.inputs.session_duration }}" \
+            -e NGROK_AUTH_TOKEN="${{ secrets.NGROK_AUTH_TOKEN }}" \
+            --network host \
+            $IMAGE
