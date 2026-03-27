@@ -5,26 +5,56 @@ VNC_PASS="${VNC_PASSWORD:-rdp123}"
 DURATION="${SESSION_HOURS:-2}"
 NGROK_TOKEN="${NGROK_AUTH_TOKEN}"
 
-# Configure VNC
+# ── XDG runtime directory (KDE requires this) ─────────────────────
+export XDG_RUNTIME_DIR=/tmp/runtime-root
+mkdir -p "$XDG_RUNTIME_DIR"
+chmod 700 "$XDG_RUNTIME_DIR"
+
+# ── Start system D-Bus daemon (KDE components need it) ────────────
+mkdir -p /run/dbus
+dbus-daemon --system --fork 2>/dev/null || true
+
+# ── Pre-configure KDE settings ────────────────────────────────────
+# Disable compositing (no GPU available in VNC)
+mkdir -p /root/.config
+cat > /root/.config/kwinrc << 'KWINEOF'
+[Compositing]
+Enabled=false
+Backend=XRender
+OpenGLIsUnsafe=true
+KWINEOF
+
+# ── Configure VNC ─────────────────────────────────────────────────
 mkdir -p ~/.vnc
 echo "$VNC_PASS" | vncpasswd -f > ~/.vnc/passwd
 chmod 600 ~/.vnc/passwd
 
-cat > ~/.vnc/xstartup << 'EOF'
+cat > ~/.vnc/xstartup << 'XEOF'
 #!/bin/bash
-unset SESSION_MANAGER
-unset DBUS_SESSION_BUS_ADDRESS
+
+# XDG environment — KDE uses these to identify the session
 export XDG_SESSION_TYPE=x11
-# Disable KWin compositing — no GPU available over VNC
+export XDG_RUNTIME_DIR=/tmp/runtime-root
+export XDG_SESSION_CLASS=user
+export XDG_SESSION_DESKTOP=KDE
+export XDG_CURRENT_DESKTOP=KDE
+export DESKTOP_SESSION=plasma
+
+# Disable KWin compositing for VNC (no GPU)
 export KWIN_COMPOSE=N
-export KWIN_TRIPLE_BUFFER=0
-exec startplasma-x11
-EOF
+
+# Launch KDE Plasma with a D-Bus session bus
+# dbus-launch starts the bus, sets DBUS_SESSION_BUS_ADDRESS, then execs plasma
+exec dbus-launch --exit-with-session startplasma-x11
+XEOF
 chmod +x ~/.vnc/xstartup
 
-# Start VNC
+# Start VNC server
 vncserver :1 -geometry 1920x1080 -depth 24 -localhost yes
 echo "[OK] VNC server started"
+
+# Give KDE a moment to fully initialize
+sleep 3
 
 # Start noVNC
 websockify --web /usr/share/novnc 6080 localhost:5901 &
