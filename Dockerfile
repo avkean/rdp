@@ -40,14 +40,27 @@ RUN sed -i 's/# en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen && locale-gen
 ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
 # ── Pre-bake KasmVNC config ─────────────────────────────────────────
+# KasmVNC has THREE interactive prompts that fail without a TTY:
+#   1. DE selection (select-de.sh) -- bypassed by .de-was-selected sentinel + xstartup
+#   2. User creation wizard -- bypassed by command_line.prompt: false + pre-created .kasmpasswd
+#   3. xstartup overwrite confirmation -- bypassed by pre-creating xstartup + .de-was-selected
+#
+# xstartup: tells KasmVNC how to launch the desktop environment
+# .de-was-selected: sentinel file that skips the DE selection prompt entirely
+# .Xauthority: pre-created to suppress "file does not exist" warning (not fatal, but noisy)
 RUN mkdir -p /root/.vnc \
-    && printf '#!/bin/bash\nunset SESSION_MANAGER\nunset DBUS_SESSION_BUS_ADDRESS\nexport XKL_XMODMAP_DISABLE=1\nexec startxfce4\n' \
-       > /root/.vnc/xstartup \
-    && chmod +x /root/.vnc/xstartup
+    && printf '#!/bin/sh\nset -x\nexec xfce4-session\n' > /root/.vnc/xstartup \
+    && chmod +x /root/.vnc/xstartup \
+    && touch /root/.vnc/.de-was-selected \
+    && touch /root/.Xauthority
 
-# KasmVNC YAML config: disable SSL (ngrok handles TLS), tune for
-# performance, allow connections from anywhere (behind ngrok tunnel)
-RUN mkdir -p /root/.vnc && cat > /root/.vnc/kasmvnc.yaml << 'YAML'
+# KasmVNC YAML config:
+#   command_line.prompt: false -- CRITICAL: disables all interactive prompts
+#     (user creation, DE selection fallback). Without this, vncserver exits
+#     with "No users configured and prompting is prohibited" or hangs waiting
+#     for input that never comes in a Docker container.
+#   ssl.require_ssl: false -- ngrok handles TLS termination
+RUN cat > /etc/kasmvnc/kasmvnc.yaml << 'YAML'
 network:
   protocol: http
   interface: 0.0.0.0
@@ -72,6 +85,8 @@ encoding:
 runtime_configuration:
   allow_client_to_override_kasm_server_settings: true
   allow_override_standard_vnc_server_settings: true
+command_line:
+  prompt: false
 YAML
 
 # ── Fix XFCE-in-Docker annoyances ──────────────────────────────────

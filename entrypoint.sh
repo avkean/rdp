@@ -11,25 +11,39 @@ mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
 mkdir -p /run/dbus && dbus-daemon --system --fork 2>/dev/null || true
 
 # ── Set KasmVNC password ───────────────────────────────────────────
-# Write .kasmpasswd directly — kasmvncpasswd requires a TTY which
-# doesn't exist in non-interactive Docker containers.
-#
-# Format: username:hash:permissions  (one per line)
-#   - hash is SHA-256 crypt: $5$kasm$<hash> (the exact format KasmVNC uses)
-#   - permissions: r=read, w=write, o=owner
-#
-# KasmVNC validates passwords by calling crypt(input, "$5$kasm$") and
-# comparing the result to the stored hash. We use `openssl passwd`
-# which is available on Kali (and most Linux) without extra packages.
-# This avoids Python's `crypt` module (removed in 3.13).
+# Write .kasmpasswd directly with a crypt(3) SHA-256 hash.
+# Format: username:hash:permissions  (ow = owner+write)
+# This must exist BEFORE vncserver starts because command_line.prompt
+# is false -- if no users exist, vncserver exits immediately with:
+#   "No users configured and prompting is prohibited, exiting."
 VNC_PW_HASH=$(openssl passwd -5 -salt kasm "${VNC_PASS}")
 echo "user:${VNC_PW_HASH}:ow" > /root/.kasmpasswd
 chmod 600 /root/.kasmpasswd
 
+# ── Ensure all KasmVNC prerequisite files exist ────────────────────
+# These are baked into the image, but verify at runtime in case
+# a volume mount or layer change wiped them.
+mkdir -p /root/.vnc
+[ -f /root/.vnc/xstartup ] || printf '#!/bin/sh\nset -x\nexec xfce4-session\n' > /root/.vnc/xstartup
+chmod +x /root/.vnc/xstartup
+touch /root/.vnc/.de-was-selected
+touch /root/.Xauthority
+
 # ── Launch KasmVNC ─────────────────────────────────────────────────
-# Single process: VNC server + WebSocket server + web client
-# No websockify or noVNC needed — all built into KasmVNC
-vncserver :1 -geometry 1920x1080 -depth 24
+# -select-de manual: tells vncserver "xstartup is pre-configured,
+#   don't run select-de.sh interactive prompt"
+# -websocketPort 6901: built-in WebSocket server for browser access
+# -interface 0.0.0.0: listen on all interfaces (behind ngrok)
+# -BlacklistThreshold=0: disable brute-force lockout (ngrok is ephemeral)
+# -FreeKeyMappings: don't remap special keys
+vncserver :1 \
+  -select-de manual \
+  -geometry 1920x1080 \
+  -depth 24 \
+  -websocketPort 6901 \
+  -interface 0.0.0.0 \
+  -BlacklistThreshold=0 \
+  -FreeKeyMappings
 
 echo "[*] KasmVNC started on port 6901"
 
