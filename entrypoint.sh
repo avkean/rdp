@@ -15,7 +15,10 @@ cat > ~/.vnc/xstartup << 'EOF'
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
 export XDG_SESSION_TYPE=x11
-exec startxfce4
+# Disable KWin compositing — no GPU available over VNC
+export KWIN_COMPOSE=N
+export KWIN_TRIPLE_BUFFER=0
+exec startplasma-x11
 EOF
 chmod +x ~/.vnc/xstartup
 
