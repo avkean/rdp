@@ -2,19 +2,18 @@ FROM kalilinux/kali-rolling
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# ── Layer 1: Desktop + VNC + utilities + ngrok ──────────────────────
-# Uses bare xfce4 (not kali-desktop-xfce) to cut ~1GB from image.
-# kali-desktop-xfce adds lightdm, kali-themes, 500+ extra packages —
-# none needed for VNC.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    xfce4 \
-    xfce4-terminal \
-    firefox-esr \
+# ── Layer 1: Full Kali XFCE desktop + VNC + utilities + ngrok ───────
+# kali-desktop-xfce gives a complete, themed desktop with proper icons,
+# GTK theme, fonts, and all expected dependencies (firefox-esr, etc.).
+# --no-install-recommends is intentionally NOT used here — recommended
+# deps include icon themes, font rendering, and libs that Firefox and
+# other GUI apps need to actually launch.
+RUN apt-get update && apt-get install -y \
+    kali-desktop-xfce \
     tigervnc-standalone-server \
     novnc \
     websockify \
     dbus dbus-x11 \
-    fonts-dejavu-core \
     wget curl nano sudo less openssh-client \
     net-tools iproute2 iputils-ping dnsutils traceroute \
     htop lsof zip unzip file \
