@@ -20,10 +20,9 @@ mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
 mkdir -p /run/dbus && dbus-daemon --system --fork 2>/dev/null || true
 
 # ── Set KasmVNC password ──────────────────────────────────────────
-# Write .kasmpasswd directly with a crypt(3) SHA-256 hash.
-# Format: username:hash:permissions  (ow = owner+write)
-VNC_PW_HASH=$(openssl passwd -5 "${VNC_PASS}")
-echo "user:${VNC_PW_HASH}:ow" > /root/.kasmpasswd
+# Use kasmvncpasswd (the official tool) — piped non-interactively.
+# -u: username, -w: write (mouse/keyboard), -o: owner
+echo -e "${VNC_PASS}\n${VNC_PASS}\n" | kasmvncpasswd -u user -wo
 chmod 600 /root/.kasmpasswd
 
 # ── Ensure KasmVNC prerequisite files exist ───────────────────────
