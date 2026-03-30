@@ -2,7 +2,7 @@
 
 Ephemeral Kali Linux desktop accessible from any browser. Runs on GitHub Actions, tunneled via ngrok. Spin up, hack, close — nothing persists.
 
-**Stack:** Kali Rolling + XFCE + TigerVNC + noVNC + ngrok
+**Stack:** Kali Rolling + XFCE (dark theme) + KasmVNC + ngrok
 
 **Tools included:** `kali-tools-top10` — nmap, metasploit, burpsuite, sqlmap, wireshark, hydra, john, aircrack-ng, responder, netexec
 
@@ -28,7 +28,7 @@ Ephemeral Kali Linux desktop accessible from any browser. Runs on GitHub Actions
 
 ## Customizing tools
 
-Edit the `Dockerfile` layer 2 to change which tools are installed:
+Edit the `Dockerfile` layer 4 to change which tools are installed:
 
 ```dockerfile
 # Minimal (just top 10)
@@ -49,7 +49,7 @@ Push the change — the image auto-rebuilds via GitHub Actions.
 ## Architecture
 
 ```
-Browser → ngrok (HTTPS) → noVNC (:6080) → websockify → TigerVNC (:5901) → XFCE (X11 :1)
+Browser → ngrok (HTTPS/WSS) → KasmVNC (:6901) → XFCE (X11 :1)
 ```
 
-Everything runs in a single container on a GitHub Actions runner. The session auto-terminates after the chosen duration.
+Everything runs in a single container on a GitHub Actions runner. KasmVNC provides the web client, VNC server, and WebSocket transport in one binary. The session auto-terminates after the chosen duration.
