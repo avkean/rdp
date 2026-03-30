@@ -2,6 +2,9 @@
 FROM kalilinux/kali-rolling
 
 ENV DEBIAN_FRONTEND=noninteractive
+# Firefox's content sandbox uses CLONE_NEWUSER which Docker's default
+# seccomp profile blocks → content processes crash with I/O errors.
+ENV MOZ_DISABLE_CONTENT_SANDBOX=1
 
 # ── Layer 1: Minimal XFCE desktop + essentials ─────────────────────
 # Hand-picked instead of kali-desktop-xfce (saves ~1.5GB of bloat:
@@ -12,10 +15,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get update && apt-get install -y \
     # Core XFCE
     xfce4 xfce4-terminal thunar xfce4-appfinder xfce4-notifyd \
+    # Panel plugins required by kali-themes default panel config
+    xfce4-whiskermenu-plugin xfce4-cpugraph-plugin xfce4-genmon-plugin \
     # Kali look & feel (kali-themes pulls wallpapers as a dependency)
-    kali-themes \
-    # System plumbing
-    dbus dbus-x11 x11-xserver-utils \
+    kali-themes kali-menu \
+    # Desktop infrastructure (dbus session bus, PolicyKit, xdg-open)
+    dbus dbus-x11 dbus-user-session x11-xserver-utils \
+    xdg-utils mate-polkit \
     # Browser
     firefox-esr \
     # CLI essentials
