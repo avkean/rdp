@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM kalilinux/kali-rolling
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -5,7 +6,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 # ── Layer 1: Minimal XFCE desktop + essentials ─────────────────────
 # Hand-picked instead of kali-desktop-xfce (saves ~1.5GB of bloat:
 # games, accessibility, printing, redundant plugins).
-RUN apt-get update && apt-get install -y \
+# Cache mount keeps downloaded .debs across rebuilds.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get install -y \
     # Core XFCE
     xfce4 xfce4-terminal thunar xfce4-appfinder xfce4-notifyd \
     # Kali look & feel (kali-themes pulls wallpapers as a dependency)
@@ -19,51 +23,45 @@ RUN apt-get update && apt-get install -y \
     net-tools iproute2 iputils-ping dnsutils traceroute \
     htop lsof zip unzip file jq \
     ca-certificates locales python3 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-              /usr/share/doc/* /usr/share/man/* /usr/share/info/*
+    && rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/*
 
 # ── Layer 2: KasmVNC ───────────────────────────────────────────────
 # Single .deb replaces tigervnc + novnc + websockify.
 # Built-in WebSocket server, web client, WebP encoding.
-RUN wget -q https://github.com/kasmtech/KasmVNC/releases/download/v1.4.0/kasmvncserver_kali-rolling_1.4.0_amd64.deb \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    wget -q https://github.com/kasmtech/KasmVNC/releases/download/v1.4.0/kasmvncserver_kali-rolling_1.4.0_amd64.deb \
        -O /tmp/kasmvnc.deb \
     && apt-get update \
     && apt-get install -y /tmp/kasmvnc.deb \
-    && rm /tmp/kasmvnc.deb \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    && rm /tmp/kasmvnc.deb
 
 # ── Layer 3: ngrok tunnel ──────────────────────────────────────────
-RUN curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
        | tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null \
     && echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
        | tee /etc/apt/sources.list.d/ngrok.list \
-    && apt-get update && apt-get install -y ngrok \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    && apt-get update && apt-get install -y ngrok
 
 # ── Layer 4: Pentesting tools (heaviest, changes least often) ──────
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     kali-tools-top10 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-              /usr/share/doc/* /usr/share/man/* /usr/share/info/*
+    && rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/*
 
 # ── Locale ──────────────────────────────────────────────────────────
 RUN sed -i 's/# en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen && locale-gen
 ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
-# ── Pre-bake KasmVNC config ────────────────────────────────────────
-# Bypass all 3 interactive TTY prompts:
-#   1. DE selection → .de-was-selected sentinel + xstartup
-#   2. User creation → command_line.prompt: false + pre-created .kasmpasswd
-#   3. xstartup overwrite → pre-creating xstartup + .de-was-selected
-RUN mkdir -p /root/.vnc \
+# ── Pre-bake KasmVNC + XFCE config ─────────────────────────────────
+# Bypass KasmVNC's 3 interactive TTY prompts + pre-configure Kali dark theme
+RUN mkdir -p /root/.vnc /root/.config/xfce4/xfconf/xfce-perchannel-xml \
     && printf '#!/bin/sh\nexec xfce4-session\n' > /root/.vnc/xstartup \
     && chmod +x /root/.vnc/xstartup \
-    && touch /root/.vnc/.de-was-selected \
-    && touch /root/.Xauthority
+    && touch /root/.vnc/.de-was-selected /root/.Xauthority
 
 # KasmVNC YAML config — optimized for ngrok WebSocket tunneling
 RUN cat > /etc/kasmvnc/kasmvnc.yaml << 'YAML'
@@ -103,11 +101,7 @@ command_line:
   prompt: false
 YAML
 
-# ── XFCE dark theme (Kali look) ────────────────────────────────────
-# Pre-configure so first launch looks right — no ugly grey defaults.
-RUN mkdir -p /root/.config/xfce4/xfconf/xfce-perchannel-xml
-
-# GTK theme + icons
+# XFCE dark theme: GTK + icons + window manager + wallpaper
 RUN cat > /root/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml << 'XML'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xsettings" version="1.0">
@@ -122,7 +116,6 @@ RUN cat > /root/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml << 'XML'
 </channel>
 XML
 
-# Window manager theme
 RUN cat > /root/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml << 'XML'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfwm4" version="1.0">
@@ -134,7 +127,6 @@ RUN cat > /root/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml << 'XML'
 </channel>
 XML
 
-# Desktop wallpaper
 RUN cat > /root/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml << 'XML'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-desktop" version="1.0">
