@@ -5,11 +5,11 @@ ENV DEBIAN_FRONTEND=noninteractive
 # ── Layer 1: Minimal XFCE desktop + essentials ─────────────────────
 # Hand-picked instead of kali-desktop-xfce (saves ~1.5GB of bloat:
 # games, accessibility, printing, redundant plugins).
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y \
     # Core XFCE
     xfce4 xfce4-terminal thunar xfce4-appfinder xfce4-notifyd \
-    # Kali look & feel
-    kali-themes kali-wallpapers \
+    # Kali look & feel (kali-themes pulls wallpapers as a dependency)
+    kali-themes \
     # System plumbing
     dbus dbus-x11 x11-xserver-utils \
     # Browser
@@ -26,9 +26,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ── Layer 2: KasmVNC ───────────────────────────────────────────────
 # Single .deb replaces tigervnc + novnc + websockify.
 # Built-in WebSocket server, web client, WebP encoding.
-RUN apt-get update && apt-get install -y \
-    && wget -q https://github.com/kasmtech/KasmVNC/releases/download/v1.4.0/kasmvncserver_kali-rolling_1.4.0_amd64.deb \
+RUN wget -q https://github.com/kasmtech/KasmVNC/releases/download/v1.4.0/kasmvncserver_kali-rolling_1.4.0_amd64.deb \
        -O /tmp/kasmvnc.deb \
+    && apt-get update \
     && apt-get install -y /tmp/kasmvnc.deb \
     && rm /tmp/kasmvnc.deb \
     && apt-get clean \
