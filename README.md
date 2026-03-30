@@ -1,55 +1,46 @@
-# Kali Desktop in Browser
+# Kali Linux Desktop in Browser
 
-Ephemeral Kali Linux desktop accessible from any browser. Runs on GitHub Actions, tunneled via ngrok. Spin up, hack, close — nothing persists.
+Spin up a temporary Kali Linux desktop you can access from any browser. Runs on GitHub Actions, tunneled through ngrok. Use it, close it — nothing persists.
 
-**Stack:** Kali Rolling + XFCE (dark theme) + KasmVNC + ngrok
+## What you get
 
-**Tools included:** `kali-tools-top10` — nmap, metasploit, burpsuite, sqlmap, wireshark, hydra, john, aircrack-ng, responder, netexec
+- Full Kali Linux desktop with dark theme, accessible in your browser
+- Pre-installed: `kali-tools-top10` (nmap, metasploit, burpsuite, sqlmap, wireshark, hydra, john, aircrack-ng, responder, netexec)
+- Firefox, terminal, file manager, and standard CLI tools
+- Auto-expires after your chosen duration (1-6 hours)
 
-## Setup (5 minutes)
+## Setup
 
 1. **Fork/clone** this repo
 
-2. **Get a free ngrok auth token** at [ngrok.com](https://ngrok.com)
+2. **Get a free ngrok token** at [ngrok.com](https://ngrok.com) and add it as a GitHub Actions secret:
+   - Repo → Settings → Secrets → Actions → `NGROK_AUTH_TOKEN`
 
-3. **Add the token** as a GitHub Actions secret:
-   - Repo → Settings → Secrets and variables → Actions → New repository secret
-   - Name: `NGROK_AUTH_TOKEN`
-   - Value: your ngrok token
-
-4. **Build the image** (one-time, ~15-20 min):
+3. **Build the image** (one-time):
    - Actions → "Build Kali Desktop Image" → Run workflow
 
-5. **Start a session**:
+4. **Start a session**:
    - Actions → "Kali Desktop Session" → Run workflow
-   - Pick duration and VNC password
-   - Wait ~1-2 min for the container to pull and start
-   - Find the ngrok URL in the workflow logs
+   - Pick duration and password
+   - Grab the ngrok URL from the workflow logs
+
+## How it works
+
+```
+Browser → ngrok (HTTPS) → KasmVNC (:6901) → Kali Desktop
+```
+
+Single container on a GitHub Actions runner. KasmVNC handles the VNC server, web client, and WebSocket transport. Session auto-terminates after your chosen duration.
 
 ## Customizing tools
 
-Edit the `Dockerfile` layer 4 to change which tools are installed:
+Edit `Dockerfile` layer 4:
 
 ```dockerfile
-# Minimal (just top 10)
-kali-tools-top10
-
-# More tools (includes top10 + masscan, amass, etc.)
-kali-linux-headless
-
-# Web-focused
-kali-tools-top10 kali-tools-web
-
-# Full default Kali install (large image)
-kali-linux-default
+kali-tools-top10          # Default — top 10 tools
+kali-linux-headless       # More tools (masscan, amass, etc.)
+kali-tools-top10 kali-tools-web  # Web-focused
+kali-linux-default        # Full Kali (large image)
 ```
 
-Push the change — the image auto-rebuilds via GitHub Actions.
-
-## Architecture
-
-```
-Browser → ngrok (HTTPS/WSS) → KasmVNC (:6901) → XFCE (X11 :1)
-```
-
-Everything runs in a single container on a GitHub Actions runner. KasmVNC provides the web client, VNC server, and WebSocket transport in one binary. The session auto-terminates after the chosen duration.
+Push and the image auto-rebuilds.
