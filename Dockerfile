@@ -65,11 +65,14 @@ ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 RUN mkdir -p /root/.vnc /root/.config/xfce4/xfconf/xfce-perchannel-xml \
     && printf '#!/bin/sh\nexec xfce4-session\n' > /root/.vnc/xstartup \
     && chmod +x /root/.vnc/xstartup \
-    && touch /root/.vnc/.de-was-selected /root/.Xauthority \
-    # Pre-configure xfce4-terminal to use Hack Nerd Font (no color overrides — keep Kali defaults)
-    && mkdir -p /root/.config/xfce4/terminal \
-    && printf '[Configuration]\nFontName=Hack Nerd Font Mono 11\nMiscAlwaysShowTabs=FALSE\nMiscDefaultGeometry=120x35\nScrollingLines=10000\n' \
-       > /root/.config/xfce4/terminal/terminalrc
+    && touch /root/.vnc/.de-was-selected /root/.Xauthority
+
+# Set Hack Nerd Font as the preferred monospace font system-wide via fontconfig.
+# This avoids creating a terminalrc (which would override Kali's default terminal
+# theme — translucent background, colors, etc.).
+RUN printf '<?xml version="1.0"?>\n<!DOCTYPE fontconfig SYSTEM "fonts.dtd">\n<fontconfig>\n  <alias>\n    <family>monospace</family>\n    <prefer><family>Hack Nerd Font Mono</family></prefer>\n  </alias>\n</fontconfig>\n' \
+       > /etc/fonts/local.conf \
+    && fc-cache -f
 
 # KasmVNC YAML config — optimized for tunneled WebSocket access
 RUN cat > /etc/kasmvnc/kasmvnc.yaml << 'YAML'
