@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-NGROK_TOKEN="${NGROK_AUTH_TOKEN:?NGROK_AUTH_TOKEN is required}"
+ZROK_TOKEN="${ZROK_ENABLE_TOKEN:?ZROK_ENABLE_TOKEN is required}"
 VNC_PASS="${VNC_PASSWORD:?VNC_PASSWORD is required}"
 DURATION="${SESSION_HOURS:-2}"
 
@@ -44,26 +44,27 @@ vncserver :1 \
 
 echo "[*] KasmVNC started on port 6901"
 
-# ── Launch ngrok tunnel ───────────────────────────────────────────
-ngrok config add-authtoken "$NGROK_TOKEN"
-ngrok http 6901 --log=stdout > /tmp/ngrok.log 2>&1 &
+# ── Launch zrok tunnel ────────────────────────────────────────────
+# enable creates a cryptographic identity for this environment
+zrok2 enable "$ZROK_TOKEN"
+# share public in headless mode (no TUI), logs URL to stdout
+zrok2 share public --headless 6901 > /tmp/zrok.log 2>&1 &
 
-# ── Wait for ngrok URL (fast polling with jq) ─────────────────────
-NGROK_URL=""
+# ── Wait for zrok URL ─────────────────────────────────────────────
+ZROK_URL=""
 for i in $(seq 1 30); do
-    NGROK_URL=$(curl -sf http://localhost:4040/api/tunnels 2>/dev/null \
-        | jq -r '.tunnels[0].public_url // empty' 2>/dev/null) \
-        && [ -n "$NGROK_URL" ] && break
-    sleep 0.3
+    ZROK_URL=$(grep -oE 'https://[a-z0-9]+\.share\.zrok\.io' /tmp/zrok.log 2>/dev/null | head -1) \
+        && [ -n "$ZROK_URL" ] && break
+    sleep 0.5
 done
-[ -z "$NGROK_URL" ] && { echo "[FATAL] ngrok failed to start"; tail -20 /tmp/ngrok.log 2>/dev/null; exit 1; }
+[ -z "$ZROK_URL" ] && { echo "[FATAL] zrok failed to start"; cat /tmp/zrok.log 2>/dev/null; exit 1; }
 
 echo ""
 echo "============================================"
 echo "  KALI LINUX - BROWSER ACCESS READY"
 echo "============================================"
 echo ""
-echo "  URL:      ${NGROK_URL}"
+echo "  URL:      ${ZROK_URL}"
 echo "  User:     user"
 echo "  Password: ${VNC_PASS}"
 echo "  Expires:  ${DURATION}h"

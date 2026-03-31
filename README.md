@@ -1,6 +1,6 @@
 # Kali Linux Desktop in Browser
 
-Spin up a temporary Kali Linux desktop you can access from any browser. Runs on GitHub Actions, tunneled through ngrok. Use it, close it — nothing persists.
+Spin up a temporary Kali Linux desktop you can access from any browser. Runs on GitHub Actions, tunneled through zrok. Use it, close it — nothing persists.
 
 ## What you get
 
@@ -13,21 +13,23 @@ Spin up a temporary Kali Linux desktop you can access from any browser. Runs on 
 
 1. **Fork/clone** this repo
 
-2. **Get a free ngrok token** at [ngrok.com](https://ngrok.com) and add it as a GitHub Actions secret:
-   - Repo → Settings → Secrets → Actions → `NGROK_AUTH_TOKEN`
+2. **Get a free zrok token** at [myzrok.io](https://myzrok.io) — sign up, then copy your enable token from Settings
 
-3. **Build the image** (one-time):
+3. **Add the token** as a GitHub Actions secret:
+   - Repo → Settings → Secrets → Actions → `ZROK_ENABLE_TOKEN`
+
+4. **Build the image** (one-time):
    - Actions → "Build Kali Desktop Image" → Run workflow
 
-4. **Start a session**:
+5. **Start a session**:
    - Actions → "Kali Desktop Session" → Run workflow
    - Pick duration and password
-   - Grab the ngrok URL from the workflow logs
+   - Grab the zrok URL from the workflow logs
 
 ## How it works
 
 ```
-Browser → ngrok (HTTPS) → KasmVNC (:6901) → Kali Desktop
+Browser → zrok (HTTPS) → KasmVNC (:6901) → Kali Desktop
 ```
 
 Single container on a GitHub Actions runner. KasmVNC handles the VNC server, web client, and WebSocket transport. Session auto-terminates after your chosen duration.
