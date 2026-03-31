@@ -67,12 +67,28 @@ RUN mkdir -p /root/.vnc /root/.config/xfce4/xfconf/xfce-perchannel-xml \
     && chmod +x /root/.vnc/xstartup \
     && touch /root/.vnc/.de-was-selected /root/.Xauthority
 
-# Set Hack Nerd Font as the preferred monospace font system-wide via fontconfig.
-# This avoids creating a terminalrc (which would override Kali's default terminal
-# theme — translucent background, colors, etc.).
-RUN printf '<?xml version="1.0"?>\n<!DOCTYPE fontconfig SYSTEM "fonts.dtd">\n<fontconfig>\n  <alias>\n    <family>monospace</family>\n    <prefer><family>Hack Nerd Font Mono</family></prefer>\n  </alias>\n</fontconfig>\n' \
-       > /etc/fonts/local.conf \
-    && fc-cache -f
+# Font rendering: Hack Nerd Font as monospace + anti-aliasing + hinting.
+# fontconfig applies to all apps. Using grayscale AA (rgba=none) because
+# subpixel rendering causes color fringing over VNC (unknown client LCD layout).
+RUN cat > /etc/fonts/local.conf << 'FONTCONF'
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+  <alias>
+    <family>monospace</family>
+    <prefer><family>Hack Nerd Font Mono</family></prefer>
+  </alias>
+  <match target="font">
+    <edit mode="assign" name="antialias"><bool>true</bool></edit>
+    <edit mode="assign" name="hinting"><bool>true</bool></edit>
+    <edit mode="assign" name="hintstyle"><const>hintslight</const></edit>
+    <edit mode="assign" name="rgba"><const>none</const></edit>
+    <edit mode="assign" name="lcdfilter"><const>lcddefault</const></edit>
+    <edit mode="assign" name="embeddedbitmap"><bool>false</bool></edit>
+  </match>
+</fontconfig>
+FONTCONF
+RUN fc-cache -f
 
 # KasmVNC YAML config — optimized for tunneled WebSocket access
 RUN cat > /etc/kasmvnc/kasmvnc.yaml << 'YAML'
@@ -94,10 +110,10 @@ desktop:
 encoding:
   max_frame_rate: 60
   rect_encoding_mode:
-    min_quality: 5
-    max_quality: 8
-    consider_lossless_quality: 10
-    rectangle_compress_threads: 0
+    min_quality: 7
+    max_quality: 9
+    consider_lossless_quality: 7
+    rectangle_compress_threads: auto
 runtime_configuration:
   allow_client_to_override_kasm_server_settings: true
   allow_override_standard_vnc_server_settings: true
@@ -123,6 +139,13 @@ RUN cat > /root/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml << 'XML'
   </property>
   <property name="Gtk" type="empty">
     <property name="FontName" type="string" value="Cantarell 10"/>
+  </property>
+  <property name="Xft" type="empty">
+    <property name="DPI" type="int" value="96"/>
+    <property name="Antialias" type="int" value="1"/>
+    <property name="Hinting" type="int" value="1"/>
+    <property name="HintStyle" type="string" value="hintslight"/>
+    <property name="RGBA" type="string" value="none"/>
   </property>
 </channel>
 XML
