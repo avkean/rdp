@@ -53,8 +53,11 @@ zrok2 share public --headless 6901 > /tmp/zrok.log 2>&1 &
 # ── Wait for zrok URL ─────────────────────────────────────────────
 ZROK_URL=""
 for i in $(seq 1 30); do
-    ZROK_URL=$(grep -oE 'https://[a-z0-9]+\.shares\.zrok\.io' /tmp/zrok.log 2>/dev/null | head -1) \
-        && [ -n "$ZROK_URL" ] && break
+    ZROK_HOST=$(grep -oE '[a-z0-9]+\.shares\.zrok\.io' /tmp/zrok.log 2>/dev/null | head -1)
+    if [ -n "$ZROK_HOST" ]; then
+        ZROK_URL="https://${ZROK_HOST}"
+        break
+    fi
     sleep 0.5
 done
 [ -z "$ZROK_URL" ] && { echo "[FATAL] zrok failed to start"; cat /tmp/zrok.log 2>/dev/null; exit 1; }
