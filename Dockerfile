@@ -107,9 +107,6 @@ data_loss_prevention:
       - image/png
 command_line:
   prompt: false
-logging:
-  log_writer_name: all
-  log_level: 30
 YAML
 
 # XFCE dark theme: GTK + icons + window manager + wallpaper
