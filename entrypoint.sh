@@ -47,13 +47,15 @@ echo "[*] KasmVNC started on port 6901"
 # ── Launch zrok tunnel ────────────────────────────────────────────
 # enable creates a cryptographic identity for this environment
 zrok2 enable --headless "$ZROK_TOKEN"
-# share public in headless mode (no TUI), logs URL to stdout
+# share public in headless mode (no TUI), logs URL to file
 zrok2 share public --headless 6901 > /tmp/zrok.log 2>&1 &
 
 # ── Wait for zrok URL ─────────────────────────────────────────────
+# Note: grep returns 1 on no match, which would kill the script
+# under set -e. The "|| true" prevents that.
 ZROK_URL=""
 for i in $(seq 1 30); do
-    ZROK_HOST=$(grep -oE '[a-z0-9]+\.shares\.zrok\.io' /tmp/zrok.log 2>/dev/null | head -1)
+    ZROK_HOST=$(grep -oEm1 '[a-z0-9]+\.shares\.zrok\.io' /tmp/zrok.log 2>/dev/null || true)
     if [ -n "$ZROK_HOST" ]; then
         ZROK_URL="https://${ZROK_HOST}"
         break
