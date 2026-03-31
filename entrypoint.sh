@@ -10,9 +10,11 @@ cleanup() {
     echo "[*] Shutting down..."
     vncserver -kill :1 2>/dev/null || true
     kill $(jobs -p) 2>/dev/null || true
+    # Release the zrok environment so the token can be reused next run
+    zrok2 disable 2>/dev/null || true
     exit 0
 }
-trap cleanup SIGTERM SIGINT
+trap cleanup SIGTERM SIGINT EXIT
 
 # ── Minimal runtime setup ─────────────────────────────────────────
 export XDG_RUNTIME_DIR=/tmp/runtime-root
@@ -45,6 +47,10 @@ vncserver :1 \
 echo "[*] KasmVNC started on port 6901"
 
 # ── Launch zrok tunnel ────────────────────────────────────────────
+# Clean up any stale environment from a previous run that didn't
+# shut down cleanly. This releases the token so enable can succeed.
+zrok2 disable 2>/dev/null || true
+
 # enable creates a cryptographic identity for this environment
 zrok2 enable --headless "$ZROK_TOKEN"
 # share public in headless mode (no TUI), logs URL to file
