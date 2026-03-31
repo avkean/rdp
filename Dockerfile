@@ -27,7 +27,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     # Browser
     firefox-esr \
     # Fonts (Hack Nerd Font symbols, general coverage)
-    fonts-hack fonts-noto-color-emoji \
+    fonts-hack fonts-noto-color-emoji fonts-wqy-zenhei \
     # CLI essentials
     wget curl nano sudo less openssh-client \
     net-tools iproute2 iputils-ping dnsutils traceroute \
@@ -66,9 +66,9 @@ RUN mkdir -p /root/.vnc /root/.config/xfce4/xfconf/xfce-perchannel-xml \
     && printf '#!/bin/sh\nexec xfce4-session\n' > /root/.vnc/xstartup \
     && chmod +x /root/.vnc/xstartup \
     && touch /root/.vnc/.de-was-selected /root/.Xauthority \
-    # Pre-configure xfce4-terminal to use Hack Nerd Font
+    # Pre-configure xfce4-terminal to use Hack Nerd Font (no color overrides — keep Kali defaults)
     && mkdir -p /root/.config/xfce4/terminal \
-    && printf '[Configuration]\nFontName=Hack Nerd Font Mono 11\nMiscAlwaysShowTabs=FALSE\nMiscDefaultGeometry=120x35\nScrollingLines=10000\nColorForeground=#d3d7cf\nColorBackground=#1e1e2e\n' \
+    && printf '[Configuration]\nFontName=Hack Nerd Font Mono 11\nMiscAlwaysShowTabs=FALSE\nMiscDefaultGeometry=120x35\nScrollingLines=10000\n' \
        > /root/.config/xfce4/terminal/terminalrc
 
 # KasmVNC YAML config — optimized for tunneled WebSocket access
