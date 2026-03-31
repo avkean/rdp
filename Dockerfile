@@ -44,14 +44,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && apt-get install -y /tmp/kasmvnc.deb \
     && rm /tmp/kasmvnc.deb
 
-# ── Layer 3: ngrok tunnel ──────────────────────────────────────────
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
-       | tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null \
-    && echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
-       | tee /etc/apt/sources.list.d/ngrok.list \
-    && apt-get update && apt-get install -y ngrok
+# ── Layer 3: zrok tunnel ───────────────────────────────────────────
+RUN curl -sSf https://get.openziti.io/install.bash | bash -s zrok2
 
 # ── Layer 4: Pentesting tools (heaviest, changes least often) ──────
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -71,7 +65,7 @@ RUN mkdir -p /root/.vnc /root/.config/xfce4/xfconf/xfce-perchannel-xml \
     && chmod +x /root/.vnc/xstartup \
     && touch /root/.vnc/.de-was-selected /root/.Xauthority
 
-# KasmVNC YAML config — optimized for ngrok WebSocket tunneling
+# KasmVNC YAML config — optimized for tunneled WebSocket access
 RUN cat > /etc/kasmvnc/kasmvnc.yaml << 'YAML'
 network:
   protocol: http

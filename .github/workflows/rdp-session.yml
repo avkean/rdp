@@ -34,5 +34,5 @@ jobs:
             -p 6901:6901 \
             -e VNC_PASSWORD="${{ github.event.inputs.vnc_password }}" \
             -e SESSION_HOURS="${{ github.event.inputs.session_duration }}" \
-            -e NGROK_AUTH_TOKEN="${{ secrets.NGROK_AUTH_TOKEN }}" \
+            -e ZROK_ENABLE_TOKEN="${{ secrets.ZROK_ENABLE_TOKEN }}" \
             ghcr.io/${{ github.repository }}/kali-desktop:latest
