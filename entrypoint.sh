@@ -72,13 +72,13 @@ echo ""
 echo "  URL:      ${ZROK_URL}"
 echo "  User:     user"
 echo "  Password: ${VNC_PASS}"
-DURATION_MINS=$(awk "BEGIN { printf \"%g\", $DURATION * 60 }")
+DURATION_MINS=$(awk -v dur="$DURATION" 'BEGIN { printf "%g", dur * 60 }')
 echo "  Expires:  ${DURATION_MINS}min"
 echo ""
 echo "============================================"
 
 # Sleep in background so trap can catch SIGTERM
 # Use awk for fractional hours (e.g. 0.5 = 30 minutes)
-SLEEP_SECS=$(awk "BEGIN { printf \"%d\", $DURATION * 3600 }")
+SLEEP_SECS=$(awk -v dur="$DURATION" 'BEGIN { printf "%d", dur * 3600 }')
 sleep "$SLEEP_SECS" &
 wait $!
