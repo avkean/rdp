@@ -27,7 +27,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     # Browser
     firefox-esr \
     # Fonts (Hack Nerd Font symbols, general coverage)
-    fonts-hack-ttf fonts-noto-color-emoji \
+    fonts-hack fonts-noto-color-emoji \
     # CLI essentials
     wget curl nano sudo less openssh-client \
     net-tools iproute2 iputils-ping dnsutils traceroute \

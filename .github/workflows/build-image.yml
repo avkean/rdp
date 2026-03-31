@@ -3,6 +3,7 @@ name: Build Kali Desktop Image
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     paths:
       - 'Dockerfile'
       - 'entrypoint.sh'
