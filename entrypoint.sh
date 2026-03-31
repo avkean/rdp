@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ZROK_TOKEN="${ZROK_ENABLE_TOKEN:?ZROK_ENABLE_TOKEN is required}"
-VNC_PASS="${VNC_PASSWORD:?VNC_PASSWORD is required}"
-DURATION="${SESSION_HOURS:-2}"
+VNC_PASS="${VNC_PASSWORD:-abc123}"
+DURATION="${SESSION_HOURS:-1}"
 
 # ── Graceful shutdown ─────────────────────────────────────────────
 cleanup() {
@@ -72,10 +72,13 @@ echo ""
 echo "  URL:      ${ZROK_URL}"
 echo "  User:     user"
 echo "  Password: ${VNC_PASS}"
-echo "  Expires:  ${DURATION}h"
+DURATION_MINS=$(awk "BEGIN { printf \"%g\", $DURATION * 60 }")
+echo "  Expires:  ${DURATION_MINS}min"
 echo ""
 echo "============================================"
 
 # Sleep in background so trap can catch SIGTERM
-sleep $(( DURATION * 3600 )) &
+# Use awk for fractional hours (e.g. 0.5 = 30 minutes)
+SLEEP_SECS=$(awk "BEGIN { printf \"%d\", $DURATION * 3600 }")
+sleep "$SLEEP_SECS" &
 wait $!

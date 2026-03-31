@@ -26,6 +26,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     xdg-utils mate-polkit \
     # Browser
     firefox-esr \
+    # Fonts (Hack Nerd Font symbols, general coverage)
+    fonts-hack-ttf fonts-noto-color-emoji \
     # CLI essentials
     wget curl nano sudo less openssh-client \
     net-tools iproute2 iputils-ping dnsutils traceroute \
@@ -63,7 +65,11 @@ ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 RUN mkdir -p /root/.vnc /root/.config/xfce4/xfconf/xfce-perchannel-xml \
     && printf '#!/bin/sh\nexec xfce4-session\n' > /root/.vnc/xstartup \
     && chmod +x /root/.vnc/xstartup \
-    && touch /root/.vnc/.de-was-selected /root/.Xauthority
+    && touch /root/.vnc/.de-was-selected /root/.Xauthority \
+    # Pre-configure xfce4-terminal to use Hack Nerd Font
+    && mkdir -p /root/.config/xfce4/terminal \
+    && printf '[Configuration]\nFontName=Hack Nerd Font Mono 11\nMiscAlwaysShowTabs=FALSE\nMiscDefaultGeometry=120x35\nScrollingLines=10000\nColorForeground=#d3d7cf\nColorBackground=#1e1e2e\n' \
+       > /root/.config/xfce4/terminal/terminalrc
 
 # KasmVNC YAML config — optimized for tunneled WebSocket access
 RUN cat > /etc/kasmvnc/kasmvnc.yaml << 'YAML'
@@ -101,6 +107,9 @@ data_loss_prevention:
       - image/png
 command_line:
   prompt: false
+logging:
+  log_writer_name: all
+  log_level: 30
 YAML
 
 # XFCE dark theme: GTK + icons + window manager + wallpaper
@@ -144,6 +153,44 @@ RUN cat > /root/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml << 'X
   </property>
 </channel>
 XML
+
+# ── Firefox: suppress first-run warnings and telemetry ─────────────
+RUN mkdir -p /usr/lib/firefox-esr/distribution \
+    && cat > /usr/lib/firefox-esr/distribution/policies.json << 'JSON'
+{
+  "policies": {
+    "DisableTelemetry": true,
+    "DontCheckDefaultBrowser": true,
+    "OverrideFirstRunPage": "",
+    "OverridePostUpdatePage": "",
+    "UserMessaging": {
+      "ExtensionRecommendations": false,
+      "FeatureRecommendations": false,
+      "UrlbarInterventions": false,
+      "SkipOnboarding": true,
+      "MoreFromMozilla": false
+    },
+    "Preferences": {
+      "datareporting.policy.dataSubmissionEnabled": { "Value": false, "Status": "locked" },
+      "toolkit.telemetry.reportingpolicy.firstRun": { "Value": false, "Status": "locked" },
+      "browser.shell.checkDefaultBrowser": { "Value": false, "Status": "locked" },
+      "app.shield.optoutstudies.enabled": { "Value": false, "Status": "locked" },
+      "app.normandy.enabled": { "Value": false, "Status": "locked" }
+    }
+  }
+}
+JSON
+
+# ── XFCE: set default terminal emulator ───────────────────────────
+RUN mkdir -p /etc/xdg/xfce4 \
+    && printf 'TerminalEmulator=xfce4-terminal\nTerminalEmulatorDismissed=true\n' \
+       > /etc/xdg/xfce4/helpers.rc
+
+# ── Install Hack Nerd Font (powerline/devicon symbols) ─────────────
+RUN mkdir -p /usr/share/fonts/truetype/hack-nerd \
+    && curl -fsSL https://github.com/ryanoasis/nerd-fonts/releases/latest/download/Hack.tar.xz \
+       | tar -xJ -C /usr/share/fonts/truetype/hack-nerd \
+    && fc-cache -f
 
 # ── Fix XFCE-in-Docker annoyances ──────────────────────────────────
 RUN mkdir -p /etc/polkit-1/localauthority/50-local.d \
