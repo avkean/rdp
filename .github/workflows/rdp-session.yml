@@ -6,13 +6,13 @@ on:
       session_duration:
         description: 'Session duration (hours)'
         required: true
-        default: '2'
+        default: '1'
         type: choice
-        options: ['1', '2', '4', '6']
+        options: ['0.5', '1', '2', '4', '6']
       vnc_password:
         description: 'VNC password (6-8 chars)'
         required: true
-        default: 'kali123'
+        default: 'abc123'
 
 jobs:
   session:
@@ -32,7 +32,7 @@ jobs:
           docker run --rm \
             --shm-size=1g \
             -p 6901:6901 \
-            -e VNC_PASSWORD="${{ github.event.inputs.vnc_password }}" \
+            -e VNC_PASSWORD="${{ github.event.inputs.vnc_password || 'abc123' }}" \
             -e SESSION_HOURS="${{ github.event.inputs.session_duration }}" \
             -e ZROK_ENABLE_TOKEN="${{ secrets.ZROK_ENABLE_TOKEN }}" \
             ghcr.io/${{ github.repository }}/kali-desktop:latest

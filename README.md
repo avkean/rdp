@@ -7,7 +7,8 @@ Spin up a temporary Kali Linux desktop you can access from any browser. Runs on 
 - Full Kali Linux desktop with dark theme, accessible in your browser
 - Pre-installed: `kali-tools-top10` (nmap, metasploit, burpsuite, sqlmap, wireshark, hydra, john, aircrack-ng, responder, netexec)
 - Firefox, terminal, file manager, and standard CLI tools
-- Auto-expires after your chosen duration (1-6 hours)
+- Hack Nerd Font pre-installed for terminal symbol rendering
+- Auto-expires after your chosen duration (30min–6 hours)
 
 ## Setup
 
@@ -23,8 +24,9 @@ Spin up a temporary Kali Linux desktop you can access from any browser. Runs on 
 
 5. **Start a session**:
    - Actions → "Kali Desktop Session" → Run workflow
-   - Pick duration and password
+   - Pick duration (default 1h) and password (default `abc123`)
    - Grab the zrok URL from the workflow logs
+   - Log in with username `user` and your chosen password
 
 ## How it works
 
