@@ -15,8 +15,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get update && apt-get install -y \
     # Core XFCE
     xfce4 xfce4-terminal thunar xfce4-appfinder xfce4-notifyd \
-    # Panel plugins required by kali-themes default panel config
+    # All 6 panel plugins referenced by kali-themes default panel config
+    # (missing any one of these causes a "Plugin loading failure" dialog)
     xfce4-whiskermenu-plugin xfce4-cpugraph-plugin xfce4-genmon-plugin \
+    xfce4-pulseaudio-plugin xfce4-power-manager-plugins \
     # Kali look & feel (kali-themes pulls wallpapers as a dependency)
     kali-themes kali-menu \
     # Desktop infrastructure (dbus session bus, PolicyKit, xdg-open)
