@@ -141,7 +141,7 @@ encoding:
   compare_framebuffer: auto
   hextile_improved_compression: true
 runtime_configuration:
-  allow_client_to_override_kasm_server_settings: true
+  allow_client_to_override_kasm_server_settings: false
   allow_override_standard_vnc_server_settings: true
 data_loss_prevention:
   clipboard:
