@@ -129,7 +129,7 @@ encoding:
     webp_quality: -1
     enter_video_encoding_mode:
       time_threshold: 5
-      area_threshold: 45
+      area_threshold: "45%"
     exit_video_encoding_mode:
       time_threshold: 3
     scaling_algorithm: 2
