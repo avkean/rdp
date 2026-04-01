@@ -5,6 +5,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Firefox's content sandbox uses CLONE_NEWUSER which Docker's default
 # seccomp profile blocks → content processes crash with I/O errors.
 ENV MOZ_DISABLE_CONTENT_SANDBOX=1
+# Prevent GTK apps from connecting to the accessibility D-Bus
+# (no screen readers in a container — saves startup time & error spam)
+ENV NO_AT_BRIDGE=1
+# Disable overlay scrollbar animations (less rendering overhead)
+ENV GTK_OVERLAY_SCROLLING=0
+
+# Skip downloading apt translation files (faster apt-get update)
+RUN echo 'Acquire::Languages "none";' > /etc/apt/apt.conf.d/99no-translations
 
 # ── Layer 1: Minimal XFCE desktop + essentials ─────────────────────
 # Hand-picked instead of kali-desktop-xfce (saves ~1.5GB of bloat:
@@ -12,7 +20,7 @@ ENV MOZ_DISABLE_CONTENT_SANDBOX=1
 # Cache mount keeps downloaded .debs across rebuilds.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    apt-get update && apt-get install -y \
+    apt-get update && apt-get install -y --no-install-recommends \
     # Core XFCE
     xfce4 xfce4-terminal thunar xfce4-appfinder xfce4-notifyd \
     # All 6 panel plugins referenced by kali-themes default panel config
@@ -33,7 +41,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     net-tools iproute2 iputils-ping dnsutils traceroute \
     htop lsof zip unzip file jq \
     ca-certificates locales python3 \
-    && rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/*
+    && rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/* \
+    && find /usr/share/locale -mindepth 1 -maxdepth 1 ! -name 'en*' -exec rm -rf {} + 2>/dev/null; true
 
 # ── Layer 2: KasmVNC ───────────────────────────────────────────────
 # Single .deb replaces tigervnc + novnc + websockify.
@@ -114,6 +123,19 @@ encoding:
     max_quality: 9
     consider_lossless_quality: 7
     rectangle_compress_threads: auto
+  # Optimized encoding for rapid screen changes (scrolling, video)
+  video_encoding_mode:
+    jpeg_quality: -1
+    webp_quality: -1
+    enter_video_encoding_mode:
+      time_threshold: 5
+      area_threshold: 45
+    exit_video_encoding_mode:
+      time_threshold: 3
+    scaling_algorithm: 2
+  # Skip sending unchanged pixels (reduces bandwidth)
+  compare_framebuffer: auto
+  hextile_improved_compression: true
 runtime_configuration:
   allow_client_to_override_kasm_server_settings: true
   allow_override_standard_vnc_server_settings: true
@@ -136,6 +158,9 @@ RUN cat > /root/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml << 'XML'
     <property name="ThemeName" type="string" value="Kali-Dark"/>
     <property name="IconThemeName" type="string" value="Flat-Remix-Blue-Dark"/>
     <property name="CursorThemeName" type="string" value="Adwaita"/>
+    <!-- No audio device in container -->
+    <property name="EnableEventSounds" type="bool" value="false"/>
+    <property name="EnableInputFeedbackSounds" type="bool" value="false"/>
   </property>
   <property name="Gtk" type="empty">
     <property name="FontName" type="string" value="Cantarell 10"/>
@@ -157,6 +182,31 @@ RUN cat > /root/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml << 'XML'
     <property name="theme" type="string" value="Kali-Dark"/>
     <property name="title_font" type="string" value="Cantarell Bold 10"/>
     <property name="title_alignment" type="string" value="center"/>
+    <!-- Disable compositor: tries GPU ops that fail in containers, wastes CPU -->
+    <property name="use_compositing" type="bool" value="false"/>
+    <!-- Disable vsync: meaningless in VNC, just adds latency -->
+    <property name="vblank_mode" type="string" value="off"/>
+    <property name="sync_to_vblank" type="bool" value="false"/>
+    <!-- Wireframe drag: draw outline instead of full window during move/resize
+         (massive VNC traffic reduction) -->
+    <property name="box_move" type="bool" value="true"/>
+    <property name="box_resize" type="bool" value="true"/>
+    <!-- Disable unnecessary visual effects -->
+    <property name="cycle_preview" type="bool" value="false"/>
+    <property name="zoom_desktop" type="bool" value="false"/>
+    <property name="zoom_pointer" type="bool" value="false"/>
+    <!-- No shadows (waste CPU cycles encoding pixels VNC must send) -->
+    <property name="show_dock_shadow" type="bool" value="false"/>
+    <property name="show_frame_shadow" type="bool" value="false"/>
+    <property name="show_popup_shadow" type="bool" value="false"/>
+    <!-- No transparency (100% = fully opaque, nothing to composite) -->
+    <property name="frame_opacity" type="int" value="100"/>
+    <property name="inactive_opacity" type="int" value="100"/>
+    <property name="move_opacity" type="int" value="100"/>
+    <property name="popup_opacity" type="int" value="100"/>
+    <property name="resize_opacity" type="int" value="100"/>
+    <!-- Single workspace: less WM state to manage -->
+    <property name="workspace_count" type="int" value="1"/>
   </property>
 </channel>
 XML
@@ -164,6 +214,10 @@ XML
 RUN cat > /root/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml << 'XML'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-desktop" version="1.0">
+  <!-- Disable desktop icons (prevents xfdesktop file monitoring overhead) -->
+  <property name="desktop-icons" type="empty">
+    <property name="style" type="int" value="0"/>
+  </property>
   <property name="backdrop" type="empty">
     <property name="screen0" type="empty">
       <property name="monitorVNC-0" type="empty">
@@ -174,6 +228,15 @@ RUN cat > /root/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml << 'X
       </property>
     </property>
   </property>
+</channel>
+XML
+
+# Disable Thunar thumbnail generation (saves CPU + I/O)
+RUN cat > /root/.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml << 'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="thunar" version="1.0">
+  <property name="misc-thumbnail-mode" type="string" value="THUNAR_THUMBNAIL_MODE_NEVER"/>
+  <property name="misc-thumbnail-draw-frames" type="bool" value="false"/>
 </channel>
 XML
 
@@ -221,7 +284,13 @@ RUN mkdir -p /etc/polkit-1/localauthority/50-local.d \
        > /etc/polkit-1/localauthority/50-local.d/45-allow-colord.pkla \
     && rm -f /etc/xdg/autostart/xfce4-power-manager.desktop \
              /etc/xdg/autostart/xscreensaver.desktop \
-             /etc/xdg/autostart/light-locker.desktop 2>/dev/null; true
+             /etc/xdg/autostart/light-locker.desktop \
+             /etc/xdg/autostart/at-spi-dbus-bus.desktop 2>/dev/null; true
+
+# Disable tumbler thumbnail daemon (all thumbnailer plugins)
+RUN if [ -f /etc/xdg/tumbler/tumbler.rc ]; then \
+      sed -i 's/^Disabled=false/Disabled=true/' /etc/xdg/tumbler/tumbler.rc; \
+    fi
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

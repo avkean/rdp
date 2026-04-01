@@ -53,4 +53,4 @@ jobs:
           outputs: type=registry,compression=zstd,force-compression=true
           # Registry cache bypasses the 10 GB GHA cache limit
           cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
+          cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max,compression=zstd
