@@ -55,6 +55,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && apt-get install -y /tmp/kasmvnc.deb \
     && rm /tmp/kasmvnc.deb
 
+# Default the KasmVNC web client to "High" quality preset (60fps, quality 7-9)
+# instead of "Medium" (24fps, quality 4). Preset values are hardcoded in ui.js.
+# The initSetting call sets the default for first-time visitors (persists in
+# browser localStorage after that).
+RUN sed -i "s/\(UI\.\(init\|update\)Setting('video_quality',\) 2)/\1 3)/g" \
+    /usr/share/kasmvnc/www/app/ui.js
+
 # ── Layer 3: zrok tunnel ───────────────────────────────────────────
 RUN curl -sSf https://get.openziti.io/install.bash | bash -s zrok2
 
@@ -141,7 +148,7 @@ encoding:
   compare_framebuffer: auto
   hextile_improved_compression: true
 runtime_configuration:
-  allow_client_to_override_kasm_server_settings: false
+  allow_client_to_override_kasm_server_settings: true
   allow_override_standard_vnc_server_settings: true
 data_loss_prevention:
   clipboard:
