@@ -56,11 +56,11 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && rm /tmp/kasmvnc.deb
 
 # Default the KasmVNC web client to "High" quality preset (60fps, quality 7-9)
-# instead of "Medium" (24fps, quality 4). Preset values are hardcoded in ui.js.
-# The initSetting call sets the default for first-time visitors (persists in
-# browser localStorage after that).
-RUN sed -i "s/\(UI\.\(init\|update\)Setting('video_quality',\) 2)/\1 3)/g" \
-    /usr/share/kasmvnc/www/app/ui.js
+# instead of "Medium" (24fps, quality 4). Preset values are hardcoded in the
+# bundled ui-*.js (Vite hashed filename). The minified code uses single-letter
+# vars (e.g. o.initSetting) so we match just the function name, not the object.
+RUN sed -i 's/\(initSetting("video_quality",\)2)/\13)/g; s/\(updateSetting("video_quality",\)2)/\13)/g' \
+    /usr/share/kasmvnc/www/assets/ui-*.js
 
 # ── Layer 3: zrok tunnel ───────────────────────────────────────────
 RUN curl -sSf https://get.openziti.io/install.bash | bash -s zrok2
