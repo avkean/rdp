@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     wget curl nano sudo less openssh-client \
     net-tools iproute2 iputils-ping dnsutils traceroute \
     htop lsof zip unzip file jq \
-    ca-certificates locales python3 \
+    ca-certificates locales python3 gnupg \
     && rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/* \
     && find /usr/share/locale -mindepth 1 -maxdepth 1 ! -name 'en*' -exec rm -rf {} + 2>/dev/null; true
 
