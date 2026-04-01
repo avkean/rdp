@@ -42,7 +42,12 @@ vncserver :1 \
   -websocketPort 6901 \
   -interface 0.0.0.0 \
   -BlacklistThreshold=0 \
-  -FreeKeyMappings
+  -FreeKeyMappings \
+  -FrameRate=60 \
+  -DynamicQualityMin=7 \
+  -DynamicQualityMax=9 \
+  -CompareFB=2 \
+  -VideoScaling=2
 
 echo "[*] KasmVNC started on port 6901"
 
