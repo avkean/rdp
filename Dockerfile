@@ -187,10 +187,8 @@ RUN cat > /root/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml << 'XML'
     <!-- Disable vsync: meaningless in VNC, just adds latency -->
     <property name="vblank_mode" type="string" value="off"/>
     <property name="sync_to_vblank" type="bool" value="false"/>
-    <!-- Wireframe drag: draw outline instead of full window during move/resize
-         (massive VNC traffic reduction) -->
-    <property name="box_move" type="bool" value="true"/>
-    <property name="box_resize" type="bool" value="true"/>
+    <property name="box_move" type="bool" value="false"/>
+    <property name="box_resize" type="bool" value="false"/>
     <!-- Disable unnecessary visual effects -->
     <property name="cycle_preview" type="bool" value="false"/>
     <property name="zoom_desktop" type="bool" value="false"/>
