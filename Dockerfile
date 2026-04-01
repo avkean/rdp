@@ -100,7 +100,11 @@ FONTCONF
 RUN fc-cache -f
 
 # KasmVNC YAML config — optimized for tunneled WebSocket access
-RUN cat > /etc/kasmvnc/kasmvnc.yaml << 'YAML'
+# Written to BOTH /etc/kasmvnc/ (system) AND /root/.vnc/ (per-user).
+# KasmVNC reads the per-user file (~/.vnc/kasmvnc.yaml) if it exists,
+# otherwise creates one from built-in defaults — ignoring /etc/kasmvnc/.
+# Pre-creating the per-user file ensures our settings actually apply.
+RUN cat > /tmp/kasmvnc.yaml << 'YAML'
 network:
   protocol: http
   interface: 0.0.0.0
@@ -149,6 +153,9 @@ data_loss_prevention:
 command_line:
   prompt: false
 YAML
+RUN cp /tmp/kasmvnc.yaml /etc/kasmvnc/kasmvnc.yaml \
+    && cp /tmp/kasmvnc.yaml /root/.vnc/kasmvnc.yaml \
+    && rm /tmp/kasmvnc.yaml
 
 # XFCE dark theme: GTK + icons + window manager + wallpaper
 RUN cat > /root/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml << 'XML'
