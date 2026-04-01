@@ -132,7 +132,7 @@ encoding:
       area_threshold: "45%"
     exit_video_encoding_mode:
       time_threshold: 3
-    scaling_algorithm: 2
+    scaling_algorithm: progressive_bilinear
   # Skip sending unchanged pixels (reduces bandwidth)
   compare_framebuffer: auto
   hextile_improved_compression: true
