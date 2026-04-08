@@ -49,26 +49,48 @@ echo "[*] KasmVNC started on port 6901"
 # ── Launch zrok tunnel ────────────────────────────────────────────
 # Clean up any stale environment from a previous run that didn't
 # shut down cleanly. This releases the token so enable can succeed.
+echo "[*] Disabling any stale zrok environment..."
 zrok2 disable 2>/dev/null || true
 
 # enable creates a cryptographic identity for this environment
-zrok2 enable --headless "$ZROK_TOKEN"
+echo "[*] Enabling zrok (token: ${ZROK_TOKEN:0:8}...)..."
+if ! zrok2 enable --headless "$ZROK_TOKEN" 2>&1 | tee /tmp/zrok-enable.log; then
+    echo "[FATAL] zrok enable failed:"
+    cat /tmp/zrok-enable.log
+    exit 1
+fi
+echo "[*] zrok enabled successfully"
+
 # share public in headless mode (no TUI), logs URL to file
+echo "[*] Starting zrok share on port 6901..."
 zrok2 share public --headless 6901 > /tmp/zrok.log 2>&1 &
+ZROK_PID=$!
 
 # ── Wait for zrok URL ─────────────────────────────────────────────
-# Note: grep returns 1 on no match, which would kill the script
-# under set -e. The "|| true" prevents that.
 ZROK_URL=""
 for i in $(seq 1 30); do
+    # Check if zrok process died
+    if ! kill -0 "$ZROK_PID" 2>/dev/null; then
+        echo "[FATAL] zrok share exited unexpectedly (attempt $i/30)"
+        echo "--- zrok share log ---"
+        cat /tmp/zrok.log 2>/dev/null
+        exit 1
+    fi
     ZROK_HOST=$(grep -oEm1 '[a-z0-9]+\.shares\.zrok\.io' /tmp/zrok.log 2>/dev/null || true)
     if [ -n "$ZROK_HOST" ]; then
         ZROK_URL="https://${ZROK_HOST}"
         break
     fi
-    sleep 0.5
+    sleep 1
 done
-[ -z "$ZROK_URL" ] && { echo "[FATAL] zrok failed to start"; cat /tmp/zrok.log 2>/dev/null; exit 1; }
+if [ -z "$ZROK_URL" ]; then
+    echo "[FATAL] zrok share timed out after 30s"
+    echo "--- zrok share log ---"
+    cat /tmp/zrok.log 2>/dev/null
+    echo "--- zrok enable log ---"
+    cat /tmp/zrok-enable.log 2>/dev/null
+    exit 1
+fi
 
 echo ""
 echo "============================================"
