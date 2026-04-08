@@ -29,10 +29,11 @@ jobs:
 
       - name: Start Kali Desktop
         run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}/kali-desktop:latest"
           docker run --rm \
             --shm-size=1g \
             -p 6901:6901 \
             -e VNC_PASSWORD="${{ github.event.inputs.vnc_password || 'abc123' }}" \
             -e SESSION_HOURS="${{ github.event.inputs.session_duration }}" \
             -e ZROK_ENABLE_TOKEN="${{ secrets.ZROK_ENABLE_TOKEN }}" \
-            ghcr.io/${{ github.repository }}/kali-desktop:latest
+            "$IMAGE"

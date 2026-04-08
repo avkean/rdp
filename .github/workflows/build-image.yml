@@ -15,11 +15,11 @@ jobs:
     permissions:
       contents: read
       packages: write
-    env:
-      IMAGE: ghcr.io/${{ github.repository }}/kali-desktop
-
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}/kali-desktop" >> "$GITHUB_ENV"
 
       # Reclaim ~30 GB — targeted removal is 3-4x faster than
       # jlumbroso/free-disk-space which uninstalls packages one by one
