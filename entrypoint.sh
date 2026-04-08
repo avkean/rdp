@@ -6,13 +6,14 @@ VNC_PASS="${VNC_PASSWORD:-abc123}"
 DURATION="${SESSION_HOURS:-1}"
 
 # ── Graceful shutdown ─────────────────────────────────────────────
+EXIT_CODE=0
 cleanup() {
     echo "[*] Shutting down..."
     vncserver -kill :1 2>/dev/null || true
     kill $(jobs -p) 2>/dev/null || true
     # Release the zrok environment so the token can be reused next run
     zrok2 disable 2>/dev/null || true
-    exit 0
+    exit "$EXIT_CODE"
 }
 trap cleanup SIGTERM SIGINT EXIT
 
@@ -57,7 +58,7 @@ echo "[*] Enabling zrok (token: ${ZROK_TOKEN:0:8}...)..."
 if ! zrok2 enable --headless "$ZROK_TOKEN" 2>&1 | tee /tmp/zrok-enable.log; then
     echo "[FATAL] zrok enable failed:"
     cat /tmp/zrok-enable.log
-    exit 1
+    EXIT_CODE=1; exit 1
 fi
 echo "[*] zrok enabled successfully"
 
@@ -74,7 +75,7 @@ for i in $(seq 1 30); do
         echo "[FATAL] zrok share exited unexpectedly (attempt $i/30)"
         echo "--- zrok share log ---"
         cat /tmp/zrok.log 2>/dev/null
-        exit 1
+        EXIT_CODE=1; exit 1
     fi
     ZROK_HOST=$(grep -oEm1 '[a-z0-9]+\.shares\.zrok\.io' /tmp/zrok.log 2>/dev/null || true)
     if [ -n "$ZROK_HOST" ]; then
@@ -89,7 +90,7 @@ if [ -z "$ZROK_URL" ]; then
     cat /tmp/zrok.log 2>/dev/null
     echo "--- zrok enable log ---"
     cat /tmp/zrok-enable.log 2>/dev/null
-    exit 1
+    EXIT_CODE=1; exit 1
 fi
 
 echo ""
